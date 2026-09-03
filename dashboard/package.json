@@ -1,0 +1,14 @@
+{
+  "name": "se-zerogrid-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard Web interativo em Node.js com Express e EJS para monitoramento e controle do sistema Zero-Grid",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}

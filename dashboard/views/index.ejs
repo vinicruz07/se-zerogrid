@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SE-ZeroGrid | Dashboard de Controle Fotovoltaico</title>
+  <meta name="description" content="Dashboard interativo em tempo real para controle e supervisão de sistema fotovoltaico com inversor retrofit em Zero Grid.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Chart.js para visualização em tempo real -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Barra Superior / Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">SE-ZeroGrid</h1>
+          <p class="brand-subtitle">Retrofit Inteligente &bull; Sistema Especialista para Inversores Fotovoltaicos</p>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <div class="badge-status badge-mode-indicator" id="badge-mode">
+          <span class="status-dot mode-dot online"></span>
+          <span id="text-mode">Modo: AUTOMÁTICO (IA)</span>
+        </div>
+        <div class="badge-status" id="badge-sim">
+          <span class="status-dot <%= connected ? 'online' : 'offline' %>"></span>
+          <span id="text-sim-status"><%= connected ? 'Simulador C Ativo' : 'Conectando ao C...' %></span>
+        </div>
+        <div class="badge-status" id="badge-ws">
+          <span class="status-dot online"></span>
+          <span>WebSocket Conectado</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Banner Principal do Ponto de Conexão com a Rede (PAC / Zero-Grid Status) -->
+    <section class="zero-grid-banner" id="zero-grid-banner">
+      <div class="banner-content">
+        <div class="banner-left">
+          <div class="banner-badge <%= telemetry.zero_grid_status === 'OK' ? 'badge-ok' : 'badge-violation' %>" id="status-badge-text">
+            <%= telemetry.zero_grid_status === 'OK' ? 'CONFORME: ZERO-GRID RESPEITADO' : 'ALERTA: VIOLAÇÃO DE ZERO-GRID (INJEÇÃO)' %>
+          </div>
+          <h2 class="banner-title" id="banner-description">
+            <% if (telemetry.p_grid > 50) { %>
+              Excedente solar sendo injetado na rede pública! A IA atuará no corte de strings.
+            <% } else if (telemetry.p_grid < -50) { %>
+              Carga atendida com complementação da concessionária.
+            <% } else { %>
+              Balanço ideal: Autoconsumo equilibrado sem exportação para a rede.
+            <% } %>
+          </h2>
+        </div>
+        <div class="banner-metric">
+          <span class="metric-label">FLUXO NO MEDIDOR PAC</span>
+          <span class="metric-big-value <%= telemetry.p_grid > 50 ? 'val-negative' : 'val-positive' %>" id="pac-flow-value">
+            <%= telemetry.p_grid > 0 ? '+' + Math.round(telemetry.p_grid) : Math.round(telemetry.p_grid) %> <small>W</small>
+          </span>
+          <span class="metric-sub" id="pac-flow-direction">
+            <%= telemetry.p_grid > 0 ? 'Exportando para a concessionária' : 'Importando da concessionária' %>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grid de Métricas Principais (Cards) -->
+    <section class="metrics-grid">
+      <!-- Card 1: Geração Solar Total -->
+      <div class="metric-card card-solar">
+        <div class="card-header">
+          <span class="card-title">GERAÇÃO SOLAR TOTAL (P_pv)</span>
+          <div class="card-icon-wrap solar-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-value" id="val-p-pv"><%= Math.round(telemetry.p_pv) %> <small>W</small></div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-solar" id="bar-p-pv" style="width: <%= Math.min(100, (telemetry.p_pv / 10000) * 100) %>%;"></div>
+          </div>
+          <div class="card-meta">
+            <span>Capacidade: 10.0 kWp</span>
+            <span id="active-strings-count"><%= telemetry.strings.filter(s => s.state === 1).length %>/4 Strings Ativas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Consumo da Carga Local -->
+      <div class="metric-card card-load">
+        <div class="card-header">
+          <span class="card-title">DEMANDA DA CARGA (P_load)</span>
+          <div class="card-icon-wrap load-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-value" id="val-p-load"><%= Math.round(telemetry.p_load) %> <small>W</small></div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-load" id="bar-p-load" style="width: <%= Math.min(100, (telemetry.p_load / 12000) * 100) %>%;"></div>
+          </div>
+          <div class="card-meta">
+            <span>Perfil: Ajustável</span>
+            <span id="load-source-ratio">Consumo Local</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Irradiação Solar -->
+      <div class="metric-card card-irradiance">
+        <div class="card-header">
+          <span class="card-title">IRRADIAÇÃO SOLAR (G)</span>
+          <div class="card-icon-wrap irradiance-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-value" id="val-irradiance"><%= Math.round(telemetry.irradiance) %> <small>W/m²</small></div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill fill-irradiance" id="bar-irradiance" style="width: <%= Math.min(100, (telemetry.irradiance / 1200) * 100) %>%;"></div>
+          </div>
+          <div class="card-meta">
+            <span>STC: 1000 W/m²</span>
+            <span id="sun-status"><%= telemetry.irradiance >= 800 ? 'Sol Pleno' : (telemetry.irradiance >= 400 ? 'Parcial' : 'Baixo') %></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Seção Central: Gráfico Temporal + Estado das Strings -->
+    <div class="layout-main">
+      <!-- Gráfico em Tempo Real -->
+      <section class="content-panel chart-panel">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Monitoramento Temporal em Tempo Real</h3>
+            <p class="panel-subtitle">Balanço instantâneo de Solar ($P_{pv}$), Carga ($P_{load}$) e Rede ($P_{grid}$)</p>
+          </div>
+          <div class="chart-legend-custom">
+            <span class="legend-item"><span class="legend-box color-solar"></span> Geração Solar</span>
+            <span class="legend-item"><span class="legend-box color-load"></span> Consumo Carga</span>
+            <span class="legend-item"><span class="legend-box color-grid"></span> PAC (Rede)</span>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="realtimeChart" height="240"></canvas>
+        </div>
+      </section>
+
+      <!-- Painel das Strings Fotovoltaicas -->
+      <section class="content-panel strings-panel">
+        <div class="panel-header strings-panel-header">
+          <div>
+            <h3 class="panel-title">Módulos Strings do Inversor</h3>
+            <p class="panel-subtitle">Controle de chaveamento (2.500 W nominal cada)</p>
+          </div>
+          <div class="strings-controls-bar">
+            <!-- Caixa para selecionar o número de módulos string -->
+            <div class="select-wrapper">
+              <label for="select-num-strings" class="select-label">Quantidade:</label>
+              <select id="select-num-strings" class="custom-select-strings">
+                <option value="1" <%= telemetry.num_strings === 1 ? 'selected' : '' %>>1 String (2.5 kWp)</option>
+                <option value="2" <%= telemetry.num_strings === 2 ? 'selected' : '' %>>2 Strings (5.0 kWp)</option>
+                <option value="3" <%= telemetry.num_strings === 3 ? 'selected' : '' %>>3 Strings (7.5 kWp)</option>
+                <option value="4" <%= (telemetry.num_strings === 4 || !telemetry.num_strings) ? 'selected' : '' %>>4 Strings (10.0 kWp)</option>
+                <option value="6" <%= telemetry.num_strings === 6 ? 'selected' : '' %>>6 Strings (15.0 kWp)</option>
+                <option value="8" <%= telemetry.num_strings === 8 ? 'selected' : '' %>>8 Strings (20.0 kWp)</option>
+              </select>
+            </div>
+
+            <!-- Botão de modo Automático / Manual para os módulos -->
+            <div class="mode-button-wrapper">
+              <button type="button" class="btn-mode-toggle <%= (telemetry.control_mode !== 'MANUAL') ? 'mode-auto' : 'mode-manual' %>" id="btn-master-mode" data-mode="<%= (telemetry.control_mode !== 'MANUAL') ? 'AUTO' : 'MANUAL' %>">
+                <span class="mode-icon"><%= (telemetry.control_mode !== 'MANUAL') ? '🤖' : '✋' %></span>
+                <span class="mode-text" id="btn-mode-text"><%= (telemetry.control_mode !== 'MANUAL') ? 'Modo: AUTOMÁTICO (IA)' : 'Modo: MANUAL (Usuário)' %></span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="strings-grid" id="strings-grid-container">
+          <% telemetry.strings.forEach((str, idx) => { %>
+            <div class="string-card <%= str.state === 1 ? 'active' : 'inactive' %>" id="string-card-<%= str.id %>">
+              <div class="string-header">
+                <span class="string-tag">String #<%= str.id + 1 %></span>
+                <span class="string-badge <%= str.state === 1 ? 'badge-on' : 'badge-off' %>" id="string-badge-<%= str.id %>">
+                  <%= str.state === 1 ? 'LIGADA' : 'CORTADA' %>
+                </span>
+              </div>
+              <div class="string-power">
+                <span class="str-power-val" id="string-val-<%= str.id %>"><%= Math.round(str.p_actual) %></span>
+                <span class="str-power-unit">W</span>
+              </div>
+              <div class="string-nominal">Nominal: <%= Math.round(str.p_nominal) %> W</div>
+              <div class="string-action">
+                <button type="button" class="btn-toggle-string" id="btn-toggle-<%= str.id %>" data-id="<%= str.id %>" data-state="<%= str.state %>">
+                  <%= str.state === 1 ? 'Desligar Manual' : 'Ligar Manual' %>
+                </button>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </section>
+    </div>
+
+    <!-- Seção de Controle Interativo do Simulador e Log da IA -->
+    <div class="layout-controls">
+      <!-- Painel de Simulação Interativa -->
+      <section class="content-panel controls-panel">
+        <div class="panel-header">
+          <h3 class="panel-title">Painel de Simulação Interativa</h3>
+          <p class="panel-subtitle">Perturbe as variáveis físicas para observar a resposta imediata da IA em C / Python</p>
+        </div>
+
+        <div class="control-groups">
+          <!-- Controle da Carga -->
+          <div class="control-box">
+            <div class="control-label-row">
+              <label for="slider-load" class="control-label">Demanda da Carga ($P_{load}$):</label>
+              <span class="control-val-display" id="display-load-val"><%= Math.round(telemetry.p_load) %> W</span>
+            </div>
+            <input type="range" id="slider-load" min="500" max="11000" step="250" value="<%= Math.round(telemetry.p_load) %>" class="custom-range">
+            <div class="preset-buttons">
+              <button class="btn-preset" data-type="load" data-val="1500">Carga Baixa (1.5 kW)</button>
+              <button class="btn-preset" data-type="load" data-val="4200">Carga Média (4.2 kW)</button>
+              <button class="btn-preset" data-type="load" data-val="7500">Carga Alta (7.5 kW)</button>
+              <button class="btn-preset" data-type="load" data-val="10500">Pico (10.5 kW)</button>
+            </div>
+          </div>
+
+          <!-- Controle da Irradiação Solar -->
+          <div class="control-box">
+            <div class="control-label-row">
+              <label for="slider-irradiance" class="control-label">Irradiação Solar Incident ($G$):</label>
+              <span class="control-val-display" id="display-irradiance-val"><%= Math.round(telemetry.irradiance) %> W/m²</span>
+            </div>
+            <input type="range" id="slider-irradiance" min="100" max="1200" step="50" value="<%= Math.round(telemetry.irradiance) %>" class="custom-range">
+            <div class="preset-buttons">
+              <button class="btn-preset" data-type="sun" data-val="250">Nublado / Chuva (250 W/m²)</button>
+              <button class="btn-preset" data-type="sun" data-val="600">Parcialmente Nublado (600 W/m²)</button>
+              <button class="btn-preset" data-type="sun" data-val="1000">Sol Pleno (1000 W/m²)</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Painel de Logs em Tempo Real da IA -->
+      <section class="content-panel logs-panel">
+        <div class="panel-header">
+          <div class="panel-title-with-badge">
+            <h3 class="panel-title">Registro de Atuação do Sistema Especialista</h3>
+            <span class="badge-rules">Motor de Inferência Ativo</span>
+          </div>
+          <button class="btn-clear-logs" id="btn-clear-logs">Limpar</button>
+        </div>
+        <div class="log-stream" id="log-stream">
+          <div class="log-entry system">
+            <span class="log-time">00:00:00</span>
+            <span class="log-text">[SISTEMA] Dashboard inicializado. Conexão em tempo real estabelecida via WebSocket.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

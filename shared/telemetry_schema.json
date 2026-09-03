@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SEZeroGridTelemetry",
+  "description": "Contrato de dados compartilhado entre o Simulador C, Sistema Especialista Python e Dashboard Node.js",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "integer",
+      "description": "Tempo em milissegundos ou contador de passos de simulação"
+    },
+    "p_load": {
+      "type": "number",
+      "description": "Potência instantânea demandada pela carga local (W)"
+    },
+    "p_pv": {
+      "type": "number",
+      "description": "Potência total instantânea gerada pelo arranjo fotovoltaico (W)"
+    },
+    "p_grid": {
+      "type": "number",
+      "description": "Potência no ponto de acoplamento comum (P_pv - P_load) em Watts. Se > 0 injeção/violação; se < 0 importação."
+    },
+    "irradiance": {
+      "type": "number",
+      "description": "Irradiação solar incidente simulada (W/m²), nominal = 1000 W/m²"
+    },
+    "num_strings": {
+      "type": "integer",
+      "description": "Número total de strings no inversor"
+    },
+    "strings": {
+      "type": "array",
+      "description": "Vetor de objetos com status e potência de cada string",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "p_nominal": { "type": "number" },
+          "p_actual": { "type": "number" },
+          "state": { "type": "integer", "enum": [0, 1] }
+        },
+        "required": ["id", "p_nominal", "p_actual", "state"]
+      }
+    },
+    "zero_grid_status": {
+      "type": "string",
+      "enum": ["OK", "VIOLATION"],
+      "description": "Status de conformidade do zero grid"
+    }
+  },
+  "required": ["timestamp", "p_load", "p_pv", "p_grid", "irradiance", "num_strings", "strings", "zero_grid_status"]
+}

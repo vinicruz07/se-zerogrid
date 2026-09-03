@@ -1,0 +1,2 @@
+# Dependências do Sistema Especialista Zero-Grid
+# O núcleo utiliza apenas a biblioteca padrão do Python (socket, json, time, sys, os)
