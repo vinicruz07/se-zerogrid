@@ -44,12 +44,39 @@ Sistema para manter sistemas fotovoltaicos com inversores antigos (sem suporte n
 
 ---
 
+## Pré-requisitos do Sistema
+
+O ecossistema SE-ZeroGrid depende de três ambientes:
+- **C (Compilador GCC / MinGW)**: para o simulador físico em tempo real.
+- **Node.js & npm (v18+)**: para o servidor Express e dashboard interativo.
+- **Python 3 (3.10+)**: para o motor de inferência e regras do sistema especialista.
+
+> [!TIP]
+> **Ainda não possui as linguagens instaladas no seu PC?**  
+> Execute primeiro o script de instalação automática. Ele verifica o que está faltando na máquina e realiza a instalação sem você precisar configurar nada manualmente:
+> ```powershell
+> .\scripts\install_prerequisites.ps1
+> ```
+> *(Também acessível pelo atalho `.\scripts\install_all.ps1` no Windows ou `./scripts/install_prerequisites.sh` no Linux/macOS).*
+
+---
+
 ## Como Executar
 
-### Opção 1: Script Automático (PowerShell no Windows)
+### Opção 1: Script Automático (Recomendado - Windows)
+
+Após garantir os pré-requisitos instalados:
+
 ```powershell
+# Para iniciar todos os 3 serviços integrados
 .\scripts\run_all.ps1
+
+# Para encerrar todos os serviços
+.\scripts\stop_all.ps1
 ```
+
+Acesse o painel em seu navegador: **`http://localhost:3000`**
+
 
 ### Opção 2: Execução Manual dos 3 Serviços
 

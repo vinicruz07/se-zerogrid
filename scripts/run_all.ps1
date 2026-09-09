@@ -21,6 +21,17 @@ if (-not (Test-Path $SimExe)) {
     Write-Host "[1/3] Simulador em C já compilado ($SimExe)." -ForegroundColor Green
 }
 
+# 2. Instalar dependências do Dashboard Node.js se necessário
+$NodeModulesDir = Join-Path $RootDir "dashboard\node_modules"
+if (-not (Test-Path $NodeModulesDir)) {
+    Write-Host "[2/3] Instalando dependências do Dashboard com npm install..." -ForegroundColor Yellow
+    Push-Location (Join-Path $RootDir "dashboard")
+    npm install
+    Pop-Location
+} else {
+    Write-Host "[2/3] Dependências do Dashboard já instaladas." -ForegroundColor Green
+}
+
 # Configura PATH com Python instalado
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
